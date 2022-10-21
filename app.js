@@ -16,8 +16,8 @@ const initializeDBAndServer = async () => {
       filename: dbPath,
       driver: sqlite3.Database,
     });
-    app.listen(3004, () => {
-      console.log("Server Running at http://localhost:3004/");
+    app.listen(3008, () => {
+      console.log("Server Running at http://localhost:3008/");
     });
   } catch (e) {
     console.log(`DB Error: ${e.message}`);
@@ -27,16 +27,27 @@ const initializeDBAndServer = async () => {
 
 initializeDBAndServer();
 
+const convertDbObjectToResponseObject = (dbObject) => {
+  return {
+    playerId: dbObject.player_id,
+    playerName: dbObject.player_name,
+    jerseyNumber: dbObject.jersey_number,
+    role: dbObject.role,
+  };
+};
+
 app.get("/players/", async (request, response) => {
   const getPlayersQuery = `
     SELECT
       *
     FROM
-      cricket_team
-    ORDER BY
-      player_id;`;
+      cricket_team;`;
   const playersArray = await db.all(getPlayersQuery);
-  response.send(playersArray);
+  response.send(
+    playersArray.map((eachPlayer) => {
+      return convertDbObjectToResponseObject(eachPlayer);
+    })
+  );
 });
 
 app.post("/players/", async (request, response) => {
@@ -54,7 +65,7 @@ app.post("/players/", async (request, response) => {
 
   const dbResponse = await db.run(addPlayerQuery);
   const bookId = dbResponse.lastID;
-  response.send({ bookId: bookId });
+  response.send("Player Added to Team");
 });
 
 app.get("/players/:playerId/", async (request, response) => {
@@ -67,7 +78,7 @@ app.get("/players/:playerId/", async (request, response) => {
     WHERE
       player_id = ${playerId};`;
   const player = await db.get(getPlayerQuery);
-  response.send(player);
+  response.send(convertDbObjectToResponseObject(player));
 });
 
 app.put("/players/:playerId/", async (request, response) => {
@@ -97,3 +108,5 @@ app.delete("/players/:playerId/", async (request, response) => {
   await db.run(deletePlayerQuery);
   response.send("Player Removed");
 });
+
+module.exports = app;
